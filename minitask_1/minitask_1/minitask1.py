@@ -23,19 +23,20 @@ class Minitask1(Node):
         self.subscription  # prevent unused variable warning
 
     #publish a message every 0.5 seconds
+    timer_count = 0
     def timer_callback(self):
         #create new message of type Twist
         msg = Twist()
         #create linear component
         l = Vector3()
-        l.x = 1.0
+        l.x = 2.0
         l.y = 0.0
         l.z = 0.0
         #create angular component
         a = Vector3()
         a.x = 0.0
         a.y = 0.0
-        a.z = 0.0
+        a.z = -0.5
 
         #set message linear and angular
         msg.linear = l
