@@ -1,0 +1,11 @@
+image: arena_map.pgm
+mode: trinary
+resolution: 0.05
+<<<<<<< HEAD
+origin: [-5.68, -6.38, 0]
+=======
+origin: [-1.61, -2.35, 0]
+>>>>>>> b4b89ffefe38460dcb546bae7e5153949d6cd8fd
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
