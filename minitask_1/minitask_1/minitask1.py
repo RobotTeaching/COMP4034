@@ -10,29 +10,28 @@ class Minitask1(Node):
     def __init__(self):
         super().__init__('minitask1')
         #create the publisher
-        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10) # "Create a publisher that publishes a `Twist` message to the `/cmd_vel` topic"
         timer_period = 0.5  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.timer = self.create_timer(timer_period, self.timer_callback) # "Run function `self.timercallback()` every `timer_period` seconds"
 
         #create the subscriber
         self.subscription = self.create_subscription(
             Odometry,
             'odom',
             self.odom_callback,
-            10)
-        self.subscription  # prevent unused variable warning
+            10) # "Subscribe to the topic `/odom` with message type `Odometry`, and run the function `self.odom_callback()` whenver data is received"
 
     #publish a message every 0.5 seconds
     timer_count = 0
     def timer_callback(self):
         #create new message of type Twist
         msg = Twist()
-        #create linear component
+        #create linear component (cartesian)
         l = Vector3()
         l.x = 2.0
         l.y = 0.0
         l.z = 0.0
-        #create angular component
+        #create angular component (euler)
         a = Vector3()
         a.x = 0.0
         a.y = 0.0
