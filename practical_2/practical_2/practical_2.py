@@ -5,10 +5,10 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import LaserScan
 
-class Minitask1(Node):
+class Practical2(Node):
     
     def __init__(self):
-        super().__init__('minitsak2')
+        super().__init__('practical_2_node')
         self.direction_1 = 0.0
         self.direction_2 = 0.0
         self.direction_3 = 0.0
@@ -38,16 +38,12 @@ class Minitask1(Node):
         self.direction_2 = msg.ranges[89]
         self.direction_3 = msg.ranges[179]
         self.direction_4 = msg.ranges[274]
-
-        
-
-
     
 
 def main(args=None):
     rclpy.init(args=args)
 
-    mt = Minitask1()
+    mt = Practical2()
 
     rclpy.spin(mt)
 

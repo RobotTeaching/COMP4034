@@ -5,10 +5,10 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 
-class Minitask1(Node):
+class Practical1(Node):
 
     def __init__(self):
-        super().__init__('minitask1')
+        super().__init__('practical_1_node')
         #create the publisher
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10) # "Create a publisher that publishes a `Twist` message to the `/cmd_vel` topic"
         timer_period = 0.5  # seconds
@@ -54,7 +54,7 @@ class Minitask1(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    mt = Minitask1()
+    mt = Practical1()
 
     rclpy.spin(mt)
 
