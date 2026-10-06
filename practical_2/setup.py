@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'minitask_2'
+package_name = 'practical_2'
 
 setup(
     name=package_name,
@@ -13,14 +13,18 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='liz',
-    maintainer_email='liz@todo.todo',
+    maintainer='team-user',
+    maintainer_email='team-user@todo.todo',
     description='TODO: Package description',
     license='Apache-2.0',
-    tests_require=['pytest'],
+    extras_require={
+        'test': [
+            'pytest',
+        ],
+    },
     entry_points={
         'console_scripts': [
-            'minitsak2 = minitask_2.minitsak2:main'
+            'practical_2 = practical_2.practical_2:main'
         ],
     },
 )
