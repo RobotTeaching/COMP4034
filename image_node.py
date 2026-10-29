@@ -1,15 +1,16 @@
 import rclpy
 import math
 from rclpy.node import Node
-from geometry_msgs.msg import Quaternion, PointStamped
-from sensor_msgs.msg import Image, CameraInfo
-from nav_msgs.msg import Odometry
+from sensor_msgs.msg import CompressedImage, CameraInfo
 from cv_bridge import CvBridge
 from tf2_ros import TransformListener, Buffer
 from tf2_geometry_msgs import do_transform_point
 import numpy as np
 import cv2
 import pyrealsense2 as rs
+
+ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+MARKER_SIZE_MM = 250  # size of marker in mm
 
 def quaternion_to_rpy(q: Quaternion):
     """
@@ -45,115 +46,57 @@ class ImageSubscriber(Node):
         
         self.subscription_image = self.create_subscription(
             Image,
-            '/camera_depth/image_raw',
+            '/camera/camera/color/image_raw/compressed',
             self.image_callback,
             10)
         
-        self.subscription_dimage = self.create_subscription(
-            Image,
-            '/camera_depth/depth/image_raw',
-            self.dimage_callback,
-            10)
+        self.camera_matrix = None
+        self.distortion_coefficients = None
         
-        self.subscription_int = self.create_subscription(
-            CameraInfo,
-            '/camera_depth/camera_info',
-            self.ins_callback,
-            10)
-
-        self.subscription = self.create_subscription(
-            Odometry,
-            'odom',
-            self.odom_callback,
-            10)
-        
-        self.ins = None
         self.image = []
-        self.dimage = []
+
         
-        self.br = CvBridge()
+        self.br = CvBridge() # We need this to convert ros2 Image to cv2 Image
         
         self.timer = self.create_timer(0.2, self.timer_callback)
     
-    def odom_callback(self, msg):
-        self.location = (msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z)
-        _, _, self.orientation = quaternion_to_rpy(msg.pose.pose.orientation)
-    
-    def ins_callback(self, data):
-        self.ins = data
-    
-    def tf_from_cam_to_map(self):
-        from_frame = 'camera_rgb_optical_frame'
-        to_frame = 'map'
-        
-        now = rclpy.time.Time()
-        
-        try:
-            tf = self.tf_buffer.lookup_transform(to_frame, from_frame, now, timeout=rclpy.duration.Duration(seconds=1.0))
-            return tf
-        except:
-            return None
-        
     def image_callback(self, data):
-        #self.get_logger().info('Receiving video frame')
+        self.get_logger().info('Receiving video frame')
     
         current_frame = self.br.imgmsg_to_cv2(data, desired_encoding='bgr8')
         
         self.image = current_frame
-        
-    def dimage_callback(self, data):
-        #self.get_logger().info('Receiving dvideo frame')
+
+    def camera_info_callback(self, data):
+        self.get_logger().info('Receiving camera info')
     
-        current_frame = self.br.imgmsg_to_cv2(data, desired_encoding='passthrough')
-        
-        self.dimage = current_frame
+        self.camera_matrix = np.array(msg.K).reshape((3,3))
+        self.distortion_coefficients = np.array(msg.D)
         
     def timer_callback(self):
         current_frame = self.image
         if current_frame == []:
             return
-        
-        centroids = [] #from the rgb image
-        depths = [] #from the depth image (pixel of centroid)
-        
-        hsv = cv2.cvtColor(current_frame, cv2.COLOR_BGR2HSV)
 
-        # Do some vision processing here to get the centroids of any green objects
-        # `centroids` should contain a list pixel points (x,y) for each green centroid
-        # `depths' should contain a list of the corresponding depth at those pixel points
+        grey = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY) # aruco detection works better in grayscale!
         
+        corners, marker_ids, _ = cv2.aruco.detectMarkers(current_frame, ARUCO_DICT) # Detect aurco markers
+        current_frame = cv2.aruco.drawDetectedMarkers(current_frame, corners, ids)
         
-        if self.ins is None:
-            return
+        if marker_ids is not None:
+            for i in range(0, len(marker_ids)):
+                rvec, tvec, markerpoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], MARKER_SIZE_MM / 1000, self.camera_matrix, self.distortion_coefficents)
+                translation = tvec.flatten()
+                rotation = rvec.ravel()
 
-        cameraInfo = self.ins
-
-        _intrinsics = rs.intrinsics()
-        _intrinsics.width = cameraInfo.width
-        _intrinsics.height = cameraInfo.height
-        _intrinsics.ppx = cameraInfo.k[2]
-        _intrinsics.ppy = cameraInfo.k[5]
-        _intrinsics.fx = cameraInfo.k[0]
-        _intrinsics.fy = cameraInfo.k[4]
-        _intrinsics.model = rs.distortion.none
-        _intrinsics.coeffs = [i for i in cameraInfo.d]
-
-        points_3d = [rs.rs2_deproject_pixel_to_point(_intrinsics, centroids[x], depths[x]) for x in range(len(centroids))]
+                self.get_logger().info(f"Detected Aruco with ID {marker_ids[i]} at position {translation}, and rotation {rotation}")
+                
+                current_frame = cv2.aruco.drawAxis(current_frame, self.camera_matrix, self.distortion_coefficients, rvec, tvec, MARKER_SIZE_MM / 1000)
+                
         
-        point = PointStamped()
-        point.header.frame_id = 'map'
-        point.point.x = points_3d[0][0]
-        point.point.y = points_3d[0][1]
-        point.point.z = points_3d[0][2]
-
-        tf = self.tf_from_cam_to_map()
-        if tf == None: return #Exit function if tf failed.
-        point_world = do_transform_point(point, tf)
-        
-        print(point_world.point.x, point_world.point.y)
-        
-        cv2.imshow("camera", current_frame)
+        cv2.imshow("ARUCO DETECTIONS", current_frame)
         cv2.waitKey(1)
+    
 
 def main(args=None):
     rclpy.init(args=args)
